@@ -9,7 +9,7 @@ import plotly.graph_objects as go
 # =========================
 # 1. 모델명 / 정책 상수
 # =========================
-MODEL_NAME = "gemini-2.5-flash"
+MODEL_NAME = "gemini-1.5-flash"
 
 WEIGHTS = {
     "concept_understanding": 0.4,
