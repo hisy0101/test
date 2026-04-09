@@ -4,6 +4,7 @@ from pydantic import BaseModel, Field
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import ChatPromptTemplate
 from langgraph.graph import StateGraph, END
+import plotly.graph_objects as go
 
 # =========================
 # 1. 모델명 / 정책 상수
@@ -580,15 +581,65 @@ if st.button("🚀 평가 실행", use_container_width=True):
 
             st.stop()
 
-    st.success("🎉 평가가 완료되었습니다.")
+        st.success("🎉 평가가 완료되었습니다.")
     st.divider()
 
     st.subheader("📊 종합 결과")
 
-    c1, c2, c3 = st.columns(3)
-    c1.metric("최종 점수", f"{final_score}점")
-    c2.metric("원점수 등급", raw_level)
-    c3.metric("최종 등급", capped_level)
+    # --- ✅ 수정 2: 기존 metric 코드를 지우고, 이 차트 로직으로 교체해! ---
+    
+    # 1. 차트 데이터 설정 (등급별 점수 구간과 색상)
+    levels = ["노력 요함", "보통", "우수", "매우 우수"]
+    colors = ["#ff6b6b", "#ffcc5c", "#88d8b0", "#289c46"]  # 빨-노-초 (학생 마음에 쏙 드는 색!)
+    ranges = [50, 25, 15, 10]  # 각 등급의 구간 길이 (0~49, 50~74, 75~89, 90~100)
+    
+    # 2. 멋진 Plotly 가로 막대 차트 생성
+    fig = go.Figure()
+    
+    for lvl, color, rng in zip(levels, colors, ranges):
+        fig.add_trace(go.Bar(
+            y=['등급'], 
+            x=[rng], 
+            name=lvl, 
+            orientation='h', 
+            marker=dict(color=color, line=dict(color='white', width=1)),
+            hoverinfo='name',
+            text=[lvl] if lvl == capped_level else [""], # 현재 등급만 글씨 표시
+            textposition='inside',
+            insidetextanchor='middle',
+            textfont=dict(color='white', size=14, family='NanumGothic, sans-serif')
+        ))
+
+    # 3. 차트 레이아웃 꾸미기 (UI 깔끔하게!)
+    fig.update_layout(
+        barmode='stack', # 누적 막대
+        height=100,      # 높이는 슬림하게
+        margin=dict(l=0, r=0, t=20, b=0), # 여백 최소화
+        showlegend=False, # 범례는 숨김 (직관성 위해)
+        xaxis=dict(showgrid=False, zeroline=False, showticklabels=False, range=[0, 100]), # 축 숨김
+        yaxis=dict(showgrid=False, zeroline=False, showticklabels=False), # 축 숨김
+        paper_bgcolor='rgba(0,0,0,0)', # 배경 투명
+        plot_bgcolor='rgba(0,0,0,0)',
+    )
+    
+    # 현재 점수 위치에 바늘/점 표시 (학생의 위치 확인!)
+    fig.add_trace(go.Scatter(
+        x=[final_score], 
+        y=['등급'], 
+        mode='markers+text',
+        marker=dict(color='black', size=15, symbol='triangle-up'),
+        text=[f'<b>{final_score}점</b>'],
+        textposition='top center',
+        textfont=dict(color='black', size=16, family='NanumGothic, sans-serif')
+    ))
+
+    # 4. Streamlit에 차트 그리기
+    st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
+
+    # (기존 metric 중 중요한 것만 아래 소형으로 배치)
+    col1, col2 = st.columns([1, 1])
+    col1.metric("원점수 등급", raw_level, help="조건 충족 전 점수 기반 등급")
+    col2.metric("최종 결과 등급", capped_level, f"{weighted_score:.1f}점 기반", help="조건 충족 여부를 반영한 최종 등급")
 
     with st.container(border=True):
         st.markdown(f"### 💌 {report.encouragement}")
