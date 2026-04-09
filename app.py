@@ -604,14 +604,16 @@ if st.button("🚀 평가 실행", use_container_width=True):
     
     # ✅ 수정: 학생 점수 미표시 및 '나의 수준 ▼' 표시
     fig.add_trace(go.Scatter(
-        x=[final_score], 
-        y=['등급'], 
-        mode='markers+text',
-        marker=dict(color='black', size=18, symbol='triangle-down'), # 역삼각형 기호
-        text=['나의 수준 ▼'], # 점수 대신 텍스트
-        textposition='top center',
-        textfont=dict(color='black', size=16, font_weight='bold', family='NanumGothic, sans-serif')
-    ))
+    x=[final_score], 
+    y=['등급'], 
+    mode='markers+text',
+    marker=dict(color='black', size=18, symbol='triangle-down'),
+    # ✅ 글씨를 굵게 하고 싶으면 텍스트에 <b> 태그를 써야 해!
+    text=['<b>나의 수준 ▼</b>'], 
+    textposition='top center',
+    # ✅ font_weight 항목을 삭제했어
+    textfont=dict(color='black', size=16, family='NanumGothic, sans-serif')
+))
 
     # 4. Streamlit에 차트 그리기
     st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
