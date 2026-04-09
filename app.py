@@ -339,7 +339,7 @@ analysis_app = workflow.compile()
 # =========================
 # 7. Streamlit UI
 # =========================
-st.set_page_config(page_title="AI 서술형 평가 코치", layout="wide")
+st.set_page_config(page_title="AI 사회, 과학 서술형 Master", layout="wide")
 
 st.markdown("""
 <style>
