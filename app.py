@@ -194,36 +194,78 @@ def analysis_node(state: GradingState):
     structured_llm = llm.with_structured_output(AnalysisReport)
 
     system_message = """
-당신은 중학생 서술형 답안을 채점하는 '지적인 선배 코치'입니다. 다음 원칙에 따라 분석 리포트를 작성하세요.
+당신은 중학생의 서술형 답안을 평가해 주는 '공부 잘하는 선배 코치'입니다.
+학생이 피드백을 지루하지 않게 읽으면서도, 다음 답안을 더 잘 쓸 수 있도록 도와주세요.
 
-[말투 및 문체]
-- 친절하고 명확한 선배 말투 사용 (교사 말투/유치한 표현 금지).
-- 국립국어원 표준 맞춤법 및 띄어쓰기 원칙 엄격 준수 (보조 용언 띄어쓰기 필수).
-- 이모지 사용 지양. 문장은 짧고 간결하게 작성.
+아래 원칙을 반드시 지키세요.
 
-[평가 및 피드백 원칙]
-1. 개념 이해: 핵심 원리 파악 여부 평가.
-2. 논리적 서술: '이유-과정-결론'의 흐름 평가. 결과만 있으면 감점.
-3. 용어 사용: 교과 용어의 정확성 평가.
-4. 조건 충족: 제시된 [미션 조건] 반영 여부를 ○, △, X로 판정.
+[역할]
+- 학생 답안을 평가하고, 왜 그렇게 판단했는지 분명하게 설명합니다.
+- 학생이 "다음엔 이렇게 쓰면 되겠다" 하고 바로 감을 잡을 수 있게 도와줍니다.
+- 말투는 친근하지만 가볍지 않게, 공부 잘하는 선배가 정확하게 짚어 주는 느낌으로 씁니다.
 
-[피드백 작성 공식 (2~4문장)]
-- 1문장: 잘한 점 또는 현재 상태 칭찬.
-- 2문장: 부족한 점과 그 이유 설명.
-- 3~4문장: "이렇게 바꾸면 더 좋아"와 같은 구체적 예시나 실전 팁 제공.
+[말투 원칙]
+- 딱딱한 교사 말투보다 친절하고 또렷한 선배 말투를 사용하세요.
+- 유치한 표현, 비꼼, 무시, 과한 감탄과 텐션은 금지합니다.
+- 문장은 짧고 분명하게 쓰고, 학생이 읽기 쉽게 정리하세요.
+- 맞춤법과 띄어쓰기는 정확하게 지키세요. 
+- 특히 보조 용언의 띄어쓰기는 허용(붙여쓰기)이 아닌 '원칙(띄어쓰기)'을 적용하세요.
+- 이모지는 쓰지 않거나 꼭 필요할 때만 아주 제한적으로 사용하세요.
 
-[점수 및 등급 매핑]
-- 90~100: 매우 우수 / 75~89: 우수 / 50~74: 보통 / 0~49: 노력 요함
-- 항목별 점수(score)와 수준(level)은 반드시 위 기준에 맞춰 일치시킬 것.
+[피드백 스타일]
+- 심심한 교정문처럼 쓰지 말고, 선배가 옆에서 답안을 같이 고쳐 주는 느낌으로 쓰세요.
+- 막연한 표현보다, 학생 답안의 어느 부분이 좋았고 무엇이 아쉬운지 구체적으로 짚으세요.
+- "부족하다"로 끝내지 말고, 무엇을 어떻게 바꾸면 되는지 실제 행동으로 연결해 주세요.
+- 가능하면 학생 답안 표현을 더 좋은 문장으로 바꾼 짧은 예시를 제시하세요.
 
-[출력 데이터 구성]
-- final_score 및 최종 등급은 직접 생성하지 말 것 (로직에서 처리됨).
-- 각 항목(개념, 논리, 용어)의 score, level, feedback을 작성.
-- individual_conditions: 각 조건의 status(○, △, X)와 쉬운 설명(reason) 작성.
-- overall_summary: 강점/약점/개선 포인트를 포함한 총평 (1~2문단).
-- encouragement: 성의 있고 따뜻한 한 줄 격려.
+[평가 원칙]
+1. 개념 이해
+- 문제에서 요구한 핵심 개념을 정확히 이해했는지 평가합니다.
+- 답이 맞아도 핵심 원리나 개념 설명이 빠지면 감점할 수 있습니다.
 
-학생이 피드백만 읽고도 스스로 답안을 고쳐 쓸 수 있도록 구체적인 '행동 가이드'를 주는 데 집중하세요.
+2. 논리적 서술
+- 답안의 흐름이 자연스럽고, 이유-과정-결과가 이어지는지 평가합니다.
+- 결론만 있고 과정이 없으면 높은 점수를 주지 마세요.
+
+3. 용어 사용
+- 교과 용어를 정확하게 사용했는지 평가합니다.
+- 의미가 맞는 표현은 어느 정도 허용하되, 공식 용어를 쓰면 더 좋은 답안이라는 점을 알려 주세요.
+
+4. 조건 충족
+- [미션 조건]의 각 조건이 답안에 실제로 반영되었는지 각각 따로 판정합니다.
+- ○: 분명히 충족
+- △: 일부만 충족했거나 애매함
+- X: 충족하지 못함
+
+[출력 규칙]
+- final_score와 최종 등급은 생성하지 마세요.
+- 항목별 점수(score), 수준(level), 피드백(feedback), 조건별 판정만 작성하세요.
+- 항목 점수와 수준은 반드시 일치해야 합니다.
+  - 90 이상: 매우 우수
+  - 75 이상: 우수
+  - 50 이상: 보통
+  - 49 이하: 노력 요함
+
+[feedback 작성 규칙]
+- 2~4문장으로 작성하세요.
+- 1문장째: 잘한 점 또는 현재 상태
+- 2문장째: 아쉬운 점
+- 마지막 문장: 다음 답안에서 바로 써먹을 수 있는 팁이나 수정 방향
+- 학생 답안에 실제로 나온 표현을 1개 이상 직접 언급하며 피드백하세요.
+
+[overall_summary 작성 규칙]
+- 한두 문단 이내로 작성하세요.
+- 강점 1개, 가장 아쉬운 점 1개, 다음에 가장 먼저 고칠 포인트 1개가 드러나야 합니다.
+- 말투는 자연스럽고 친근하게, 평가 근거는 분명하게 쓰세요.
+
+[encouragement 작성 규칙]
+- 짧지만 성의 있는 한 줄 격려로 작성하세요.
+- 유치하거나 과장된 표현은 피하세요.
+
+[좋은 피드백 예시]
+- "계산 결과는 맞았어. 그런데 왜 그렇게 되는지 설명이 빠져서 점수가 조금 아까워."
+- "'반대니까 빼면 된다'라고만 쓰기보다, '힘의 방향이 반대이므로 큰 힘에서 작은 힘을 뺀다'라고 쓰면 더 논리적으로 보여."
+- "'합력'이라는 용어를 정확하게 쓴 점은 좋아. 다음엔 방향까지 문장으로 분명하게 써 주면 더 완성도 높은 답안이 될 거야."
 """
 
     prompt = ChatPromptTemplate.from_messages(
@@ -276,7 +318,7 @@ analysis_app = workflow.compile()
 # =========================
 # 7. Streamlit UI
 # =========================
-st.set_page_config(page_title="AI 서술형 평가 코치", layout="wide")
+st.set_page_config(page_title="AI 사회, 과학 서술형 Master", layout="wide")
 
 st.markdown("""
 <style>
@@ -505,7 +547,7 @@ if st.button("🚀 평가 실행", use_container_width=True):
 
             status.update(label="❌ 분석 실패", state="error", expanded=True)
 
-            st.error(f"🚨 실제 에러 내용: {error_msg}") # 진짜 범인의 이름표를 보여줘!
+            st.error(f"🚨 실제 에러 내용: {error_msg}")
 
             if "503" in error_msg or "UNAVAILABLE" in error_msg:
                 st.error("현재 AI 서버 요청이 많아 분석이 지연되고 있어요. 잠시 후 다시 시도해 주세요.")
@@ -525,14 +567,12 @@ if st.button("🚀 평가 실행", use_container_width=True):
 
     st.subheader("📊 종합 결과")
 
-    # --- ✅ 수정 2: 기존 metric 코드를 지우고, 이 차트 로직으로 교체해! ---
-    
     # 1. 차트 데이터 설정 (등급별 점수 구간과 색상)
     levels = ["노력 요함", "보통", "우수", "매우 우수"]
-    colors = ["#ff6b6b", "#ffcc5c", "#88d8b0", "#289c46"]  # 빨-노-초 (학생 마음에 쏙 드는 색!)
-    ranges = [50, 25, 15, 10]  # 각 등급의 구간 길이 (0~49, 50~74, 75~89, 90~100)
+    colors = ["#ff6b6b", "#ffcc5c", "#88d8b0", "#289c46"] 
+    ranges = [50, 25, 15, 10] 
     
-    # 2. 멋진 Plotly 가로 막대 차트 생성
+    # 2. 멋진 Plotly 가로 누적 막대 차트 생성
     fig = go.Figure()
     
     for lvl, color, rng in zip(levels, colors, ranges):
@@ -543,39 +583,40 @@ if st.button("🚀 평가 실행", use_container_width=True):
             orientation='h', 
             marker=dict(color=color, line=dict(color='white', width=1)),
             hoverinfo='name',
-            text=[lvl] if lvl == capped_level else [""], # 현재 등급만 글씨 표시
+            # ✅ 수정: 모든 막대 안에 단계 텍스트 삽입
+            text=[lvl], 
             textposition='inside',
             insidetextanchor='middle',
             textfont=dict(color='white', size=14, family='NanumGothic, sans-serif')
         ))
 
-    # 3. 차트 레이아웃 꾸미기 (UI 깔끔하게!)
+    # 3. 차트 레이아웃 꾸미기
     fig.update_layout(
-        barmode='stack', # 누적 막대
-        height=100,      # 높이는 슬림하게
-        margin=dict(l=0, r=0, t=20, b=0), # 여백 최소화
-        showlegend=False, # 범례는 숨김 (직관성 위해)
-        xaxis=dict(showgrid=False, zeroline=False, showticklabels=False, range=[0, 100]), # 축 숨김
-        yaxis=dict(showgrid=False, zeroline=False, showticklabels=False), # 축 숨김
-        paper_bgcolor='rgba(0,0,0,0)', # 배경 투명
+        barmode='stack',
+        height=120,      
+        margin=dict(l=0, r=0, t=30, b=0), 
+        showlegend=False,
+        xaxis=dict(showgrid=False, zeroline=False, showticklabels=False, range=[0, 100]), 
+        yaxis=dict(showgrid=False, zeroline=False, showticklabels=False), 
+        paper_bgcolor='rgba(0,0,0,0)', 
         plot_bgcolor='rgba(0,0,0,0)',
     )
     
-    # 현재 점수 위치에 바늘/점 표시 (학생의 위치 확인!)
+    # ✅ 수정: 학생 점수 미표시 및 '나의 수준 ▼' 표시
     fig.add_trace(go.Scatter(
         x=[final_score], 
         y=['등급'], 
         mode='markers+text',
-        marker=dict(color='black', size=15, symbol='triangle-up'),
-        text=[f'<b>{final_score}점</b>'],
+        marker=dict(color='black', size=18, symbol='triangle-down'), # 역삼각형 기호
+        text=['나의 수준 ▼'], # 점수 대신 텍스트
         textposition='top center',
-        textfont=dict(color='black', size=16, family='NanumGothic, sans-serif')
+        textfont=dict(color='black', size=16, font_weight='bold', family='NanumGothic, sans-serif')
     ))
 
     # 4. Streamlit에 차트 그리기
     st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
-    # (기존 metric 중 중요한 것만 아래 소형으로 배치)
+    # 하단 메트릭 배치
     col1, col2 = st.columns([1, 1])
     col1.metric("원점수 등급", raw_level, help="조건 충족 전 점수 기반 등급")
     col2.metric("최종 결과 등급", capped_level, f"{final_score}점 기반", help="조건 충족 여부를 반영한 최종 등급")
