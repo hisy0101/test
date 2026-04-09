@@ -182,44 +182,63 @@ def get_condition_summary(conditions: List[IndividualCondition]):
     }
 
 # =========================
-# 5. 분석 노드 (테스트용 Mock 버전)
+# 5. 분석 노드 (지능형 Mock 버전 - 테스트용)
 # =========================
 def analysis_node(state: GradingState):
-    # 실제 AI 호출을 하지 않고, 2초 정도 분석하는 척하다가 결과를 돌려줍니다.
     import time
-    time.sleep(2) # 분석 중인 느낌을 주기 위한 홀딩
-
-    # 테스트를 위해 임의의 결과값을 만듭니다.
-    # (학생 답안의 길이에 따라 점수가 조금씩 다르게 나오게 세팅해봤어!)
-    ans_len = len(state["student_answer"])
+    import random
     
+    # 1. AI가 고뇌하는 시간 (1.5초 ~ 3초 랜덤)
+    time.sleep(random.uniform(1.5, 3.0))
+
+    ans = state["student_answer"]
+    
+    # 2. 아주 간단한 지능형 로직 (키워드 체크)
+    has_unit = "N" in ans.upper() or "뉴턴" in ans
+    has_direction = "오른쪽" in ans or "앞" in ans or "말" in ans
+    has_calc = "350" in ans and "150" in ans
+    
+    # 점수 세팅 (키워드 유무에 따라 점수 부여)
+    concept_score = 90 if (has_unit and has_calc) else 65
+    logic_score = 95 if has_direction else 55
+    term_score = 100 if "합력" in ans or "알짜힘" in ans else 70
+
+    # 3. AI 코치다운 '진짜' 피드백 셋업
     mock_report = AnalysisReport(
         concept_understanding=CategoryResult(
-            score=95 if ans_len > 30 else 60,
-            level="매우 우수" if ans_len > 30 else "보통",
-            feedback="말씀하신 대로 '합력'의 개념을 정확하게 짚었어. 큰 힘에서 작은 힘을 빼는 원리를 답안에 잘 녹여 낸 점이 훌륭해."
+            score=concept_score,
+            level=get_level_from_score(concept_score),
+            feedback=f"'{ans[:10]}...' 부분에서 힘의 크기를 계산하려 노력한 흔적이 보여. "
+                     f"{'단위(N)까지 정확히 쓴 점이 아주 훌륭해.' if has_unit else '다만, 과학에서는 단위(N)가 생명이니 다음엔 꼭 챙겨 주자.'} "
+                     f"큰 힘에서 작은 힘을 빼는 원리를 잊지 마!"
         ),
         logical_writing=CategoryResult(
-            score=88 if ans_len > 20 else 40,
-            level="우수" if ans_len > 20 else "노력 요함",
-            feedback="계산 과정이 논리적으로 잘 서술되었어. 다만 결론에서 방향을 한 번 더 강조해 주면 완벽한 답안이 될 거야."
+            score=logic_score,
+            level=get_level_from_score(logic_score),
+            feedback=f"전체적으로 논리적인 흐름은 나쁘지 않아. "
+                     f"{'합력의 방향을 명시한 덕분에 답안이 명확해졌어.' if has_direction else '그런데 힘의 방향이 빠져서 점수가 조금 아깝네. 어디로 힘이 쏠리는지 꼭 써 줘.'} "
+                     f"문장을 마칠 때 '방향'을 점검하는 습관을 들이면 완벽할 거야."
         ),
         term_usage=CategoryResult(
-            score=90,
-            level="매우 우수",
-            feedback="'N(뉴턴)' 단위와 '합력'이라는 용어를 아주 적절하게 사용했어. 과학적 표현력이 상당히 지적인걸?"
+            score=term_score,
+            level=get_level_from_score(term_score),
+            feedback=f"{'전문 용어인 합력을 정확히 사용했네! 선배가 보기엔 용어 선택이 아주 지적이야.' if term_score == 100 else '과학적인 느낌을 살리려면 단순한 계산 결과보다 합력이라는 단어를 써 보는 건 어때?'}"
         ),
         individual_conditions=[
-            IndividualCondition(name="계산 과정 포함", status="○" if "350" in state["student_answer"] else "X", reason="계산식(350-150)이 명확하게 드러나 있어."),
-            IndividualCondition(name="크기와 방향 명시", status="△", reason="크기(200N)는 잘 썼지만, '오른쪽'이라는 방향 설명이 조금 모호해."),
-            IndividualCondition(name="용어 사용", status="○", reason="'합력' 또는 '알짜힘' 용어를 정확히 사용했어.")
+            IndividualCondition(name="계산 과정 포함", status="○" if has_calc else "X", 
+                                reason=f"{'숫자를 활용해 식을 잘 세웠어.' if has_calc else '풀이 과정에 뺄셈식이 직접 보였으면 좋겠어.'}"),
+            IndividualCondition(name="크기와 방향 명시", status="○" if (has_unit and has_direction) else "△", 
+                                reason=f"{'크기와 방향을 모두 챙겼어!' if (has_unit and has_direction) else '크기나 방향 중 하나가 살짝 모호해.'}"),
+            IndividualCondition(name="용어 사용", status="○" if term_score == 100 else "X", 
+                                reason=f"{'필수 용어를 잘 넣었어.' if term_score == 100 else '핵심 키워드가 누락되었어.'}")
         ],
-        encouragement="답안의 방향은 아주 잘 잡았어! 조금만 더 구체적으로 쓰면 전교 1등도 문제없겠어.",
-        overall_summary="전반적으로 개념에 대한 이해도가 높고 논리적인 답안이야. 조건 중 '방향' 부분만 보완하면 완벽해질 것 같아. 선배가 보기엔 가능성이 무궁무진해!"
+        encouragement="지금처럼만 하면 서술형 마스터는 시간문제야! 😎",
+        overall_summary=f"오늘 네 답안의 핵심은 {'정확한 계산' if has_calc else '적극적인 시도'}였어. "
+                        f"{'논리적인 부분만 조금 더 보강하면' if logic_score < 90 else '전교 1등급 실력이'} 충분히 나올 것 같아. "
+                        f"선배가 옆에서 계속 도와줄게, 다음 문제도 같이 정복해 보자!"
     )
 
     return {"analysis_result": mock_report}
-
 
 # =========================
 # 6. 그래프 구축
