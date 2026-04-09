@@ -182,63 +182,44 @@ def get_condition_summary(conditions: List[IndividualCondition]):
     }
 
 # =========================
-# 5. 분석 노드 (지능형 Mock 버전 - 테스트용)
+# 5. 분석 노드 (테스트용 Mock 버전)
 # =========================
 def analysis_node(state: GradingState):
+    # 실제 AI 호출을 하지 않고, 2초 정도 분석하는 척하다가 결과를 돌려줍니다.
     import time
-    import random
-    
-    # 1. AI가 고뇌하는 시간 (1.5초 ~ 3초 랜덤)
-    time.sleep(random.uniform(1.5, 3.0))
+    time.sleep(2) # 분석 중인 느낌을 주기 위한 홀딩
 
-    ans = state["student_answer"]
+    # 테스트를 위해 임의의 결과값을 만듭니다.
+    # (학생 답안의 길이에 따라 점수가 조금씩 다르게 나오게 세팅해봤어!)
+    ans_len = len(state["student_answer"])
     
-    # 2. 아주 간단한 지능형 로직 (키워드 체크)
-    has_unit = "N" in ans.upper() or "뉴턴" in ans
-    has_direction = "오른쪽" in ans or "앞" in ans or "말" in ans
-    has_calc = "350" in ans and "150" in ans
-    
-    # 점수 세팅 (키워드 유무에 따라 점수 부여)
-    concept_score = 90 if (has_unit and has_calc) else 65
-    logic_score = 95 if has_direction else 55
-    term_score = 100 if "합력" in ans or "알짜힘" in ans else 70
-
-    # 3. AI 코치다운 '진짜' 피드백 셋업
     mock_report = AnalysisReport(
         concept_understanding=CategoryResult(
-            score=concept_score,
-            level=get_level_from_score(concept_score),
-            feedback=f"'{ans[:10]}...' 부분에서 힘의 크기를 계산하려 노력한 흔적이 보여. "
-                     f"{'단위(N)까지 정확히 쓴 점이 아주 훌륭해.' if has_unit else '다만, 과학에서는 단위(N)가 생명이니 다음엔 꼭 챙겨 주자.'} "
-                     f"큰 힘에서 작은 힘을 빼는 원리를 잊지 마!"
+            score=95 if ans_len > 30 else 60,
+            level="매우 우수" if ans_len > 30 else "보통",
+            feedback="말씀하신 대로 '합력'의 개념을 정확하게 짚었어. 큰 힘에서 작은 힘을 빼는 원리를 답안에 잘 녹여 낸 점이 훌륭해."
         ),
         logical_writing=CategoryResult(
-            score=logic_score,
-            level=get_level_from_score(logic_score),
-            feedback=f"전체적으로 논리적인 흐름은 나쁘지 않아. "
-                     f"{'합력의 방향을 명시한 덕분에 답안이 명확해졌어.' if has_direction else '그런데 힘의 방향이 빠져서 점수가 조금 아깝네. 어디로 힘이 쏠리는지 꼭 써 줘.'} "
-                     f"문장을 마칠 때 '방향'을 점검하는 습관을 들이면 완벽할 거야."
+            score=88 if ans_len > 20 else 40,
+            level="우수" if ans_len > 20 else "노력 요함",
+            feedback="계산 과정이 논리적으로 잘 서술되었어. 다만 결론에서 방향을 한 번 더 강조해 주면 완벽한 답안이 될 거야."
         ),
         term_usage=CategoryResult(
-            score=term_score,
-            level=get_level_from_score(term_score),
-            feedback=f"{'전문 용어인 합력을 정확히 사용했네! 선배가 보기엔 용어 선택이 아주 지적이야.' if term_score == 100 else '과학적인 느낌을 살리려면 단순한 계산 결과보다 합력이라는 단어를 써 보는 건 어때?'}"
+            score=90,
+            level="매우 우수",
+            feedback="'N(뉴턴)' 단위와 '합력'이라는 용어를 아주 적절하게 사용했어. 과학적 표현력이 상당히 지적인걸?"
         ),
         individual_conditions=[
-            IndividualCondition(name="계산 과정 포함", status="○" if has_calc else "X", 
-                                reason=f"{'숫자를 활용해 식을 잘 세웠어.' if has_calc else '풀이 과정에 뺄셈식이 직접 보였으면 좋겠어.'}"),
-            IndividualCondition(name="크기와 방향 명시", status="○" if (has_unit and has_direction) else "△", 
-                                reason=f"{'크기와 방향을 모두 챙겼어!' if (has_unit and has_direction) else '크기나 방향 중 하나가 살짝 모호해.'}"),
-            IndividualCondition(name="용어 사용", status="○" if term_score == 100 else "X", 
-                                reason=f"{'필수 용어를 잘 넣었어.' if term_score == 100 else '핵심 키워드가 누락되었어.'}")
+            IndividualCondition(name="계산 과정 포함", status="○" if "350" in state["student_answer"] else "X", reason="계산식(350-150)이 명확하게 드러나 있어."),
+            IndividualCondition(name="크기와 방향 명시", status="△", reason="크기(200N)는 잘 썼지만, '오른쪽'이라는 방향 설명이 조금 모호해."),
+            IndividualCondition(name="용어 사용", status="○", reason="'합력' 또는 '알짜힘' 용어를 정확히 사용했어.")
         ],
-        encouragement="지금처럼만 하면 서술형 마스터는 시간문제야! 😎",
-        overall_summary=f"오늘 네 답안의 핵심은 {'정확한 계산' if has_calc else '적극적인 시도'}였어. "
-                        f"{'논리적인 부분만 조금 더 보강하면' if logic_score < 90 else '전교 1등급 실력이'} 충분히 나올 것 같아. "
-                        f"선배가 옆에서 계속 도와줄게, 다음 문제도 같이 정복해 보자!"
+        encouragement="답안의 방향은 아주 잘 잡았어! 조금만 더 구체적으로 쓰면 전교 1등도 문제없겠어.",
+        overall_summary="전반적으로 개념에 대한 이해도가 높고 논리적인 답안이야. 조건 중 '방향' 부분만 보완하면 완벽해질 것 같아. 선배가 보기엔 가능성이 무궁무진해!"
     )
 
     return {"analysis_result": mock_report}
+
 
 # =========================
 # 6. 그래프 구축
@@ -355,11 +336,57 @@ div[data-testid="stMetricValue"] {
 }
 
 /* ===== 알림 박스 ===== */
+            
+/* ===== 페이지 배경 ===== */
+.stApp {
+    background: linear-gradient(180deg, #F8FAFC 0%, #FFFFFF 100%);
+}
+
+/* ===== 입력창 카드 느낌 ===== */
+textarea, input {
+    border-radius: 12px !important;
+    border: 1px solid #D1D5DB !important;
+    box-shadow: 0 2px 8px rgba(15,23,42,0.03);
+}
+
+/* ===== 버튼 고급화 ===== */
+button[kind="primary"] {
+    border-radius: 12px !important;
+    border: none !important;
+    background: linear-gradient(90deg, #2563EB 0%, #4F46E5 100%) !important;
+    color: white !important;
+    box-shadow: 0 8px 18px rgba(37,99,235,0.22);
+}
+
+/* ===== metric 카드 느낌 ===== */
+div[data-testid="stMetric"] {
+    background: #FFFFFF;
+    border: 1px solid #E5E7EB;
+    border-radius: 14px;
+    padding: 12px 16px;
+    box-shadow: 0 4px 12px rgba(15,23,42,0.04);
+}
+            
 [data-testid="stAlertContainer"] p {
     font-size: 1rem !important;
     line-height: 1.55 !important;
 }
 </style>
+""", unsafe_allow_html=True)
+
+st.markdown("""
+<div style="
+    display:inline-block;
+    padding:6px 12px;
+    border-radius:999px;
+    background:#EEF2FF;
+    color:#4338CA;
+    font-size:0.86rem;
+    font-weight:700;
+    margin-bottom:10px;
+">
+    Mock Preview · AI 평가 결과 시뮬레이션
+</div>
 """, unsafe_allow_html=True)
 
 st.markdown("""
@@ -387,7 +414,7 @@ st.markdown("""
     ">AI 사, 과 서술형 Master 👑</span>
 </div>
 """, unsafe_allow_html=True)
-st.caption("LLM은 항목별 판단과 피드백을 생성하고, 최종 점수와 등급은 Python 로직으로 계산합니다.")
+st.caption("AI가 항목별 분석과 피드백을 생성하고, 최종 점수와 등급은 시스템 계산 로직으로 산출합니다.")
 st.divider()
 
 with st.sidebar:
@@ -528,26 +555,24 @@ if st.button("🚀 평가 실행", use_container_width=True):
     # 3. 차트 레이아웃 꾸미기
     fig.update_layout(
         barmode='stack',
-        height=120,      
-        margin=dict(l=0, r=0, t=30, b=0), 
+        height=92,
+        margin=dict(l=0, r=0, t=26, b=0),
         showlegend=False,
-        xaxis=dict(showgrid=False, zeroline=False, showticklabels=False, range=[0, 100]), 
-        yaxis=dict(showgrid=False, zeroline=False, showticklabels=False), 
-        paper_bgcolor='rgba(0,0,0,0)', 
+        xaxis=dict(showgrid=False, zeroline=False, showticklabels=False, range=[0, 100]),
+        yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+        paper_bgcolor='rgba(0,0,0,0)',
         plot_bgcolor='rgba(0,0,0,0)',
     )
     
     # ✅ 수정: 학생 점수 미표시 및 '나의 수준 ▼' 표시
     fig.add_trace(go.Scatter(
-    x=[final_score], 
-    y=['등급'], 
+    x=[final_score],
+    y=['등급'],
     mode='markers+text',
-    marker=dict(color='black', size=18, symbol='triangle-down'),
-    # ✅ 글씨를 굵게 하고 싶으면 텍스트에 <b> 태그를 써야 해!
-    text=['<b>나의 수준 ▼</b>'], 
+    marker=dict(color='#111827', size=16, symbol='triangle-down'),
+    text=['<b>나의 수준</b>'],
     textposition='top center',
-    # ✅ font_weight 항목을 삭제했어
-    textfont=dict(color='black', size=16, family='NanumGothic, sans-serif')
+    textfont=dict(color='#111827', size=14, family='NanumGothic, sans-serif')
 ))
 
     # 4. Streamlit에 차트 그리기
@@ -558,10 +583,51 @@ if st.button("🚀 평가 실행", use_container_width=True):
     col1.metric("원점수 등급", raw_level, help="조건 충족 전 점수 기반 등급")
     col2.metric("최종 결과 등급", capped_level, f"{final_score}점 기반", help="조건 충족 여부를 반영한 최종 등급")
 
-    with st.container(border=True):
-        st.markdown(f"### 💌 {report.encouragement}")
-        st.markdown(f"**최종 랭크:** `{final_grade_label}`")
-        st.write(report.overall_summary)
+    st.markdown(f"""
+<div style="
+    background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+    border:1px solid #E5E7EB;
+    border-radius:16px;
+    padding:20px 22px;
+    box-shadow:0 6px 18px rgba(15, 23, 42, 0.05);
+    margin-bottom:18px;
+">
+    <div style="
+        display:inline-block;
+        padding:4px 10px;
+        border-radius:999px;
+        background:#F3F4F6;
+        color:#374151;
+        font-size:0.82rem;
+        font-weight:700;
+        margin-bottom:12px;
+    ">AI 코치 총평</div>
+
+    <div style="font-size:1.2rem; font-weight:800; margin-bottom:8px;">
+        💌 {report.encouragement}
+    </div>
+
+    <div style="margin-bottom:10px;">
+        <span style="
+            display:inline-block;
+            padding:6px 12px;
+            border-radius:999px;
+            background:#ECFDF3;
+            color:#047857;
+            font-size:0.9rem;
+            font-weight:700;
+        ">최종 랭크 · {final_grade_label}</span>
+    </div>
+
+    <div style="
+        font-size:1.02rem;
+        line-height:1.7;
+        color:#374151;
+    ">
+        {report.overall_summary}
+    </div>
+</div>
+""", unsafe_allow_html=True)
 
     # --- ✅ 수정 1: 항목별 정밀 분석 (삼분할 HTML 표) ---
     st.subheader("🔍 항목별 정밀 분석")
@@ -569,53 +635,93 @@ if st.button("🚀 평가 실행", use_container_width=True):
     condition_summary = get_condition_summary(report.individual_conditions)
 
     main_table_html = f"""
-
-    <table style="width:100%; border-collapse: collapse; border: 1px solid #ddd; margin-bottom: 20px; font-size: 15px;">
-        <tr style="background-color: #f8f9fa; text-align: left;">
-            <th style="padding: 12px; border: 1px solid #ddd; width: 20%;">평가 항목</th>
-            <th style="padding: 12px; border: 1px solid #ddd; width: 20%; text-align: center;">수준 (별점)</th>
-            <th style="padding: 12px; border: 1px solid #ddd; width: 60%;">선배의 족집게 피드백 & 꿀팁 🎯</th>
-        </tr>
-        <tr>
-            <td style="padding: 12px; border: 1px solid #ddd; font-weight: bold;">개념 이해 (40%)</td>
-            <td style="padding: 12px; border: 1px solid #ddd; text-align: center;">{get_star_rating(report.concept_understanding.level)}<br>{report.concept_understanding.level}</td>
-            <td style="padding: 12px; border: 1px solid #ddd; line-height: 1.6;">{report.concept_understanding.feedback}</td>
-        </tr>
-        <tr>
-            <td style="padding: 12px; border: 1px solid #ddd; font-weight: bold;">논리적 서술 (30%)</td>
-            <td style="padding: 12px; border: 1px solid #ddd; text-align: center;">{get_star_rating(report.logical_writing.level)}<br>{report.logical_writing.level}</td>
-            <td style="padding: 12px; border: 1px solid #ddd; line-height: 1.6;">{report.logical_writing.feedback}</td>
-        </tr>
-        <tr>
-            <td style="padding: 12px; border: 1px solid #ddd; font-weight: bold;">용어 사용 (30%)</td>
-            <td style="padding: 12px; border: 1px solid #ddd; text-align: center;">{get_star_rating(report.term_usage.level)}<br>{report.term_usage.level}</td>
-            <td style="padding: 12px; border: 1px solid #ddd; line-height: 1.6;">{report.term_usage.feedback}</td>
-        </tr>
-        <tr>
-            <td style="padding: 12px; border: 1px solid #ddd; font-weight: bold;">조건 충족 (등급 상한)</td>
-            <td style="padding: 12px; border: 1px solid #ddd; text-align: center;">{get_star_rating(condition_summary["level"])}<br>{condition_summary["level"]}</td>
-            <td style="padding: 12px; border: 1px solid #ddd; line-height: 1.6;">{condition_summary["feedback"]}</td>
-        </tr>
-    </table>
-    """
+<table style="
+    width:100%;
+    border-collapse:separate;
+    border-spacing:0;
+    border:1px solid #E5E7EB;
+    border-radius:14px;
+    overflow:hidden;
+    margin-bottom:24px;
+    font-size:15px;
+    box-shadow:0 6px 16px rgba(15,23,42,0.04);
+">
+    <tr style="background:#F8FAFC; text-align:left;">
+        <th style="padding:14px; border-bottom:1px solid #E5E7EB; width:20%;">평가 항목</th>
+        <th style="padding:14px; border-bottom:1px solid #E5E7EB; width:20%; text-align:center;">수준 (별점)</th>
+        <th style="padding:14px; border-bottom:1px solid #E5E7EB; width:60%;">AI 분석 피드백</th>
+    </tr>
+    <tr style="background:#FFFFFF;">
+        <td style="padding:14px; border-bottom:1px solid #F1F5F9; font-weight:700;">개념 이해 (40%)</td>
+        <td style="padding:14px; border-bottom:1px solid #F1F5F9; text-align:center;">{get_star_rating(report.concept_understanding.level)}<br>{report.concept_understanding.level}</td>
+        <td style="padding:14px; border-bottom:1px solid #F1F5F9; line-height:1.7;">{report.concept_understanding.feedback}</td>
+    </tr>
+    <tr style="background:#FCFCFD;">
+        <td style="padding:14px; border-bottom:1px solid #F1F5F9; font-weight:700;">논리적 서술 (30%)</td>
+        <td style="padding:14px; border-bottom:1px solid #F1F5F9; text-align:center;">{get_star_rating(report.logical_writing.level)}<br>{report.logical_writing.level}</td>
+        <td style="padding:14px; border-bottom:1px solid #F1F5F9; line-height:1.7;">{report.logical_writing.feedback}</td>
+    </tr>
+    <tr style="background:#FFFFFF;">
+        <td style="padding:14px; border-bottom:1px solid #F1F5F9; font-weight:700;">용어 사용 (30%)</td>
+        <td style="padding:14px; border-bottom:1px solid #F1F5F9; text-align:center;">{get_star_rating(report.term_usage.level)}<br>{report.term_usage.level}</td>
+        <td style="padding:14px; border-bottom:1px solid #F1F5F9; line-height:1.7;">{report.term_usage.feedback}</td>
+    </tr>
+    <tr style="background:#FCFCFD;">
+        <td style="padding:14px; font-weight:700;">조건 충족 (등급 상한)</td>
+        <td style="padding:14px; text-align:center;">{get_star_rating(condition_summary["level"])}<br>{condition_summary["level"]}</td>
+        <td style="padding:14px; line-height:1.7;">{condition_summary["feedback"]}</td>
+    </tr>
+</table>
+"""
+    
     st.markdown(main_table_html, unsafe_allow_html=True)
 
     # --- ✅ 수정 2: 조건 충족 현황 (기호 후 줄바꿈 박스 스타일) ---
     st.subheader("🚩 개별 조건 충족 현황")
 
     for cond in report.individual_conditions:
-        # 상태에 따른 배경색 지정
-        bg_color = "#e6fffa" if cond.status == "○" else "#fffaf0" if cond.status == "△" else "#fff5f5"
-        border_color = "#38a169" if cond.status == "○" else "#d69e2e" if cond.status == "△" else "#e53e3e"
-        
-        box_html = f"""
-        <div style="background-color: {bg_color}; padding: 16px; border-radius: 8px; border-left: 5px solid {border_color}; margin-bottom: 12px;">
-            <div style="font-weight: bold; font-size: 16px; margin-bottom: 4px;">{cond.name} | <span style="font-size: 20px;">{cond.status}</span></div>
-            <br>
-            <div style="font-size: 15px; color: #2d3748; line-height: 1.6;">{cond.reason}</div>
+    bg_color = "#e6fffa" if cond.status == "○" else "#fffaf0" if cond.status == "△" else "#fff5f5"
+    border_color = "#38a169" if cond.status == "○" else "#d69e2e" if cond.status == "△" else "#e53e3e"
+    label_text = "충족" if cond.status == "○" else "부분 충족" if cond.status == "△" else "미충족"
+
+    box_html = f"""
+    <div style="
+        background-color:{bg_color};
+        padding:16px 18px;
+        border-radius:14px;
+        border:1px solid rgba(15,23,42,0.06);
+        border-left:6px solid {border_color};
+        margin-bottom:14px;
+        box-shadow:0 4px 12px rgba(15,23,42,0.03);
+    ">
+        <div style="
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            gap:12px;
+            margin-bottom:8px;
+        ">
+            <div style="font-weight:800; font-size:16px; color:#111827;">
+                {cond.name}
+            </div>
+            <div style="
+                padding:4px 10px;
+                border-radius:999px;
+                background:#ffffff;
+                font-size:13px;
+                font-weight:700;
+                color:{border_color};
+                border:1px solid {border_color};
+            ">
+                {label_text}
+            </div>
         </div>
-        """
-        st.markdown(box_html, unsafe_allow_html=True)
+        <div style="font-size:14.5px; color:#374151; line-height:1.65;">
+            {cond.reason}
+        </div>
+    </div>
+    """
+    st.markdown(box_html, unsafe_allow_html=True)
 
     # --- ✅ 수정 3: 계산 근거 ---
     with st.expander("🧮 상세 계산 근거 확인하기"):
