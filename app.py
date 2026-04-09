@@ -182,127 +182,43 @@ def get_condition_summary(conditions: List[IndividualCondition]):
     }
 
 # =========================
-# 5. 분석 노드
+# 5. 분석 노드 (테스트용 Mock 버전)
 # =========================
 def analysis_node(state: GradingState):
-    llm = ChatGoogleGenerativeAI(
-        model=MODEL_NAME,
-        google_api_key=state["api_key"],
-        temperature=0.1,  # 평가 일관성을 높이기 위해 낮춤
+    # 실제 AI 호출을 하지 않고, 2초 정도 분석하는 척하다가 결과를 돌려줍니다.
+    import time
+    time.sleep(2) # 분석 중인 느낌을 주기 위한 홀딩
+
+    # 테스트를 위해 임의의 결과값을 만듭니다.
+    # (학생 답안의 길이에 따라 점수가 조금씩 다르게 나오게 세팅해봤어!)
+    ans_len = len(state["student_answer"])
+    
+    mock_report = AnalysisReport(
+        concept_understanding=CategoryResult(
+            score=95 if ans_len > 30 else 60,
+            level="매우 우수" if ans_len > 30 else "보통",
+            feedback="말씀하신 대로 '합력'의 개념을 정확하게 짚었어. 큰 힘에서 작은 힘을 빼는 원리를 답안에 잘 녹여 낸 점이 훌륭해."
+        ),
+        logical_writing=CategoryResult(
+            score=88 if ans_len > 20 else 40,
+            level="우수" if ans_len > 20 else "노력 요함",
+            feedback="계산 과정이 논리적으로 잘 서술되었어. 다만 결론에서 방향을 한 번 더 강조해 주면 완벽한 답안이 될 거야."
+        ),
+        term_usage=CategoryResult(
+            score=90,
+            level="매우 우수",
+            feedback="'N(뉴턴)' 단위와 '합력'이라는 용어를 아주 적절하게 사용했어. 과학적 표현력이 상당히 지적인걸?"
+        ),
+        individual_conditions=[
+            IndividualCondition(name="계산 과정 포함", status="○" if "350" in state["student_answer"] else "X", reason="계산식(350-150)이 명확하게 드러나 있어."),
+            IndividualCondition(name="크기와 방향 명시", status="△", reason="크기(200N)는 잘 썼지만, '오른쪽'이라는 방향 설명이 조금 모호해."),
+            IndividualCondition(name="용어 사용", status="○", reason="'합력' 또는 '알짜힘' 용어를 정확히 사용했어.")
+        ],
+        encouragement="답안의 방향은 아주 잘 잡았어! 조금만 더 구체적으로 쓰면 전교 1등도 문제없겠어.",
+        overall_summary="전반적으로 개념에 대한 이해도가 높고 논리적인 답안이야. 조건 중 '방향' 부분만 보완하면 완벽해질 것 같아. 선배가 보기엔 가능성이 무궁무진해!"
     )
 
-    structured_llm = llm.with_structured_output(AnalysisReport)
-
-    system_message = """
-당신은 중학생의 서술형 답안을 평가해 주는 '공부 잘하는 선배 코치'입니다.
-학생이 피드백을 지루하지 않게 읽으면서도, 다음 답안을 더 잘 쓸 수 있도록 도와주세요.
-
-아래 원칙을 반드시 지키세요.
-
-[역할]
-- 학생 답안을 평가하고, 왜 그렇게 판단했는지 분명하게 설명합니다.
-- 학생이 "다음엔 이렇게 쓰면 되겠다" 하고 바로 감을 잡을 수 있게 도와줍니다.
-- 말투는 친근하지만 가볍지 않게, 공부 잘하는 선배가 정확하게 짚어 주는 느낌으로 씁니다.
-
-[말투 원칙]
-- 딱딱한 교사 말투보다 친절하고 또렷한 선배 말투를 사용하세요.
-- 유치한 표현, 비꼼, 무시, 과한 감탄과 텐션은 금지합니다.
-- 문장은 짧고 분명하게 쓰고, 학생이 읽기 쉽게 정리하세요.
-- 맞춤법과 띄어쓰기는 정확하게 지키세요. 
-- 특히 보조 용언의 띄어쓰기는 허용(붙여쓰기)이 아닌 '원칙(띄어쓰기)'을 적용하세요.
-- 이모지는 쓰지 않거나 꼭 필요할 때만 아주 제한적으로 사용하세요.
-
-[피드백 스타일]
-- 심심한 교정문처럼 쓰지 말고, 선배가 옆에서 답안을 같이 고쳐 주는 느낌으로 쓰세요.
-- 막연한 표현보다, 학생 답안의 어느 부분이 좋았고 무엇이 아쉬운지 구체적으로 짚으세요.
-- "부족하다"로 끝내지 말고, 무엇을 어떻게 바꾸면 되는지 실제 행동으로 연결해 주세요.
-- 가능하면 학생 답안 표현을 더 좋은 문장으로 바꾼 짧은 예시를 제시하세요.
-
-[평가 원칙]
-1. 개념 이해
-- 문제에서 요구한 핵심 개념을 정확히 이해했는지 평가합니다.
-- 답이 맞아도 핵심 원리나 개념 설명이 빠지면 감점할 수 있습니다.
-
-2. 논리적 서술
-- 답안의 흐름이 자연스럽고, 이유-과정-결과가 이어지는지 평가합니다.
-- 결론만 있고 과정이 없으면 높은 점수를 주지 마세요.
-
-3. 용어 사용
-- 교과 용어를 정확하게 사용했는지 평가합니다.
-- 의미가 맞는 표현은 어느 정도 허용하되, 공식 용어를 쓰면 더 좋은 답안이라는 점을 알려 주세요.
-
-4. 조건 충족
-- [미션 조건]의 각 조건이 답안에 실제로 반영되었는지 각각 따로 판정합니다.
-- ○: 분명히 충족
-- △: 일부만 충족했거나 애매함
-- X: 충족하지 못함
-
-[출력 규칙]
-- final_score와 최종 등급은 생성하지 마세요.
-- 항목별 점수(score), 수준(level), 피드백(feedback), 조건별 판정만 작성하세요.
-- 항목 점수와 수준은 반드시 일치해야 합니다.
-  - 90 이상: 매우 우수
-  - 75 이상: 우수
-  - 50 이상: 보통
-  - 49 이하: 노력 요함
-
-[feedback 작성 규칙]
-- 2~4문장으로 작성하세요.
-- 1문장째: 잘한 점 또는 현재 상태
-- 2문장째: 아쉬운 점
-- 마지막 문장: 다음 답안에서 바로 써먹을 수 있는 팁이나 수정 방향
-- 학생 답안에 실제로 나온 표현을 1개 이상 직접 언급하며 피드백하세요.
-
-[overall_summary 작성 규칙]
-- 한두 문단 이내로 작성하세요.
-- 강점 1개, 가장 아쉬운 점 1개, 다음에 가장 먼저 고칠 포인트 1개가 드러나야 합니다.
-- 말투는 자연스럽고 친근하게, 평가 근거는 분명하게 쓰세요.
-
-[encouragement 작성 규칙]
-- 짧지만 성의 있는 한 줄 격려로 작성하세요.
-- 유치하거나 과장된 표현은 피하세요.
-
-[좋은 피드백 예시]
-- "계산 결과는 맞았어. 그런데 왜 그렇게 되는지 설명이 빠져서 점수가 조금 아까워."
-- "'반대니까 빼면 된다'라고만 쓰기보다, '힘의 방향이 반대이므로 큰 힘에서 작은 힘을 뺀다'라고 쓰면 더 논리적으로 보여."
-- "'합력'이라는 용어를 정확하게 쓴 점은 좋아. 다음엔 방향까지 문장으로 분명하게 써 주면 더 완성도 높은 답안이 될 거야."
-"""
-
-    prompt = ChatPromptTemplate.from_messages(
-        [
-            ("system", system_message),
-            ("user", """
-[문제]
-{question}
-
-[미션 조건]
-{conditions}
-
-[필수 키워드]
-{keywords}
-
-[모범 답안]
-{reference}
-
-[학생 답안]
-{student_answer}
-"""),
-        ]
-    )
-
-    chain = prompt | structured_llm
-
-    result = chain.invoke(
-        {
-            "question": state["question"],
-            "conditions": state["conditions"],
-            "keywords": state["keywords"],
-            "reference": state["reference"],
-            "student_answer": state["student_answer"],
-        }
-    )
-
-    return {"analysis_result": result}
+    return {"analysis_result": mock_report}
 
 
 # =========================
