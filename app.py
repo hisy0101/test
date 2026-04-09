@@ -9,7 +9,7 @@ import plotly.graph_objects as go
 # =========================
 # 1. 모델명 / 정책 상수
 # =========================
-MODEL_NAME = "gemini-1.5-flash"
+MODEL_NAME = "gemini-2.5-flash"
 
 WEIGHTS = {
     "concept_understanding": 0.4,
@@ -504,6 +504,8 @@ if st.button("🚀 평가 실행", use_container_width=True):
             error_msg = str(e)
 
             status.update(label="❌ 분석 실패", state="error", expanded=True)
+
+            st.error(f"🚨 실제 에러 내용: {error_msg}") # 진짜 범인의 이름표를 보여줘!
 
             if "503" in error_msg or "UNAVAILABLE" in error_msg:
                 st.error("현재 AI 서버 요청이 많아 분석이 지연되고 있어요. 잠시 후 다시 시도해 주세요.")
