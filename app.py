@@ -339,7 +339,7 @@ analysis_app = workflow.compile()
 # =========================
 # 7. Streamlit UI
 # =========================
-st.set_page_config(page_title="AI 사회, 과학 서술형 Master", layout="wide")
+st.set_page_config(page_title="AI 서술형 평가 코치", layout="wide")
 
 st.markdown("""
 <style>
@@ -639,7 +639,7 @@ if st.button("🚀 평가 실행", use_container_width=True):
     # (기존 metric 중 중요한 것만 아래 소형으로 배치)
     col1, col2 = st.columns([1, 1])
     col1.metric("원점수 등급", raw_level, help="조건 충족 전 점수 기반 등급")
-    col2.metric("최종 결과 등급", capped_level, f"{weighted_score:.1f}점 기반", help="조건 충족 여부를 반영한 최종 등급")
+    col2.metric("최종 결과 등급", capped_level, f"{final_score}점 기반", help="조건 충족 여부를 반영한 최종 등급")
 
     with st.container(border=True):
         st.markdown(f"### 💌 {report.encouragement}")
