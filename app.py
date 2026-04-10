@@ -185,48 +185,107 @@ def get_condition_summary(conditions: List[IndividualCondition]):
 # =========================
 def analysis_node(state: GradingState):
     import time
-    time.sleep(2)  # 분석 중인 느낌
-
-    ans_len = len(state["student_answer"])
-
-    mock_report = AnalysisReport(
-        concept_understanding=CategoryResult(
-            score=95 if ans_len > 30 else 60,
-            level="매우 우수" if ans_len > 30 else "보통",
-            feedback="말씀하신 대로 '합력'의 개념을 정확하게 짚었어. 큰 힘에서 작은 힘을 빼는 원리를 답안에 잘 녹여 낸 점이 훌륭해."
-        ),
-        logical_writing=CategoryResult(
-            score=88 if ans_len > 20 else 40,
-            level="우수" if ans_len > 20 else "노력 요함",
-            feedback="계산 과정이 논리적으로 잘 서술되었어. 다만 결론에서 방향을 한 번 더 강조해 주면 완벽한 답안이 될 거야."
-        ),
-        term_usage=CategoryResult(
-            score=90,
-            level="매우 우수",
-            feedback="'N(뉴턴)' 단위와 '합력'이라는 용어를 아주 적절하게 사용했어. 과학적 표현력이 상당히 지적인걸?"
-        ),
-        individual_conditions=[
-            IndividualCondition(
-                name="계산 과정 포함",
-                status="○" if "350" in state["student_answer"] or "150" in state["student_answer"] else "X",
-                reason="계산식(350-150) 또는 계산 과정이 드러나 있는지 기준으로 확인했어."
+    import re
+    
+    time.sleep(1.5)  # 분석하는 척!
+    ans = state["student_answer"].strip()
+    
+    # 1. 키워드 및 조건 체크 로직
+    has_calc = "350" in ans and "150" in ans  # 계산 과정(숫자 포함 여부)
+    has_val = "200" in ans and ("N" in ans or "뉴턴" in ans)  # 크기와 단위
+    has_dir = any(word in ans for word in ["앞", "오른쪽", "말", "이동"])  # 방향
+    has_term = any(word in ans for word in ["합력", "알짜힘"])  # 용어 사용
+    
+    # 2. 시나리오 판별 및 데이터 생성
+    
+    # [시나리오 A: 의미 없는 입력 (ㄹㄹㄹㄹ 등)]
+    if len(set(ans)) < 5 or len(ans) < 8:
+        report = AnalysisReport(
+            concept_understanding=CategoryResult(
+                score=10, level="노력 요함",
+                feedback="답안을 쓰려고 노력한 흔적은 보이지만, 아직 핵심 내용이 담기지 않았어. 문제에 나온 숫자들을 어떻게 계산해야 할지 천천히 다시 읽어 볼까? 먼저 말이 끄는 힘과 사람이 미는 힘의 방향을 확인해 봐."
             ),
-            IndividualCondition(
-                name="크기와 방향 명시",
-                status="△",
-                reason="크기(200N)는 잘 썼지만, 방향 설명이 조금 더 또렷하면 좋아."
+            logical_writing=CategoryResult(
+                score=10, level="노력 요함",
+                feedback="생각의 순서를 보여 주기에는 답안이 너무 짧아서 조금 아쉬워. 왜 그런 결과가 나왔는지 친구에게 설명하듯이 한 문장씩 늘려 보는 연습을 해 보자. 어떤 힘에서 어떤 힘을 빼야 할지부터 써 볼까?"
             ),
-            IndividualCondition(
-                name="용어 사용",
-                status="○",
-                reason="'합력' 또는 '알짜힘' 용어를 정확히 사용했어."
-            )
-        ],
-        encouragement="답안의 방향은 아주 잘 잡았어! 조금만 더 구체적으로 쓰면 전교 1등도 문제없겠어.",
-        overall_summary="전반적으로 개념에 대한 이해도가 높고 논리적인 답안이야. 조건 중 '방향' 부분만 보완하면 완벽해질 것 같아. 선배가 보기엔 가능성이 무궁무진해!"
-    )
+            term_usage=CategoryResult(
+                score=10, level="노력 요함",
+                feedback="과학 공부의 시작은 용어를 정확히 쓰는 것부터야. 이번 문제에서 가장 중요한 단어인 '합력'이나 '알짜힘'을 넣어서 문장을 다시 만들어 보면 좋겠어."
+            ),
+            individual_conditions=[
+                IndividualCondition(name="계산 과정 포함", status="X", reason="계산식이나 숫자가 전혀 보이지 않아."),
+                IndividualCondition(name="크기와 방향 명시", status="X", reason="결과값과 방향이 누락되었어."),
+                IndividualCondition(name="용어 사용", status="X", reason="핵심 과학 용어가 사용되지 않았어.")
+            ],
+            encouragement="장난은 여기까지! 이제 진짜 실력을 보여 줄 때야. 😎",
+            overall_summary="내용이 부족해서 제대로 된 평가를 하기 어려워. 문제에 제시된 350N과 150N의 관계를 고민해서 다시 한번 도전해 보자!"
+        )
 
-    return {"analysis_result": mock_report}
+    # [시나리오 B: 방향 누락 (사용자가 준 예시 상황)]
+    elif has_calc and has_val and not has_dir:
+        report = AnalysisReport(
+            concept_understanding=CategoryResult(
+                score=85, level="우수",
+                feedback="방향이 반대인 두 힘을 빼서 계산하려고 한 접근이 아주 좋았어. 다만 왜 두 힘을 빼야 하는지 그 원리를 살짝만 더해 주면 완벽할 것 같아. 힘의 방향이 서로 반대일 때 합력을 어떻게 구하는지 그 이유를 한 문장만 앞에 적어 보자."
+            ),
+            logical_writing=CategoryResult(
+                score=60, level="보통",
+                feedback="계산 결과가 200N이라는 건 정확하게 잘 찾아냈어. 하지만 지금 답안에는 수레가 최종적으로 어느 쪽으로 움직이게 될지에 대한 설명이 빠져서 조금 아쉬워. 말이 끄는 힘과 사람이 당기는 힘 중에 어느 쪽이 더 큰지 비교해 보고, 마지막에 방향까지 꼭 같이 적어 줄래?"
+            ),
+            term_usage=CategoryResult(
+                score=95, level="매우 우수",
+                feedback="'합력'이라는 용어를 문맥에 맞게 아주 잘 사용했네! 과학 답안에서는 이렇게 배운 용어를 정확하게 써 주는 게 정말 중요하거든. 다음번에도 지금처럼 배운 단어를 활용해서 답안을 멋지게 완성해 보자."
+            ),
+            individual_conditions=[
+                IndividualCondition(name="계산 과정 포함", status="○", reason="350에서 150을 뺀다는 계산 과정이 잘 드러나 있어."),
+                IndividualCondition(name="크기와 방향 명시", status="△", reason="크기와 단위(200N)는 잘 썼지만, 어느 방향으로 힘이 작용하는지는 적지 않았어."),
+                IndividualCondition(name="용어 사용", status="○", reason="'합력'이라는 용어를 빠뜨리지 않고 적절하게 사용했어.")
+            ],
+            encouragement="알려 준 포인트만 보완하면 다음에는 분명히 만점 받을 수 있을 거야! 👍",
+            overall_summary="전체적으로 두 힘의 차이를 구해야 한다는 핵심은 아주 잘 파악했어! 다만 힘은 크기만큼이나 '방향'이 중요해. 어느 힘이 더 큰지 확인하고 그 방향을 결과에 포함하는 연습을 해 보자."
+        )
+
+    # [시나리오 C: 완벽한 정답]
+    elif has_calc and has_val and has_dir and has_term:
+        report = AnalysisReport(
+            concept_understanding=CategoryResult(
+                score=100, level="매우 우수",
+                feedback="힘의 방향이 반대일 때 큰 힘에서 작은 힘을 뺀다는 원리를 완벽하게 이해했구나! 350N과 150N의 관계를 정확히 파악해서 답을 쓴 점이 인상적이야. 더 이상 보완할 곳이 없는 아주 훌륭한 이해도야."
+            ),
+            logical_writing=CategoryResult(
+                score=95, level="매우 우수",
+                feedback="생각의 순서가 아주 매끄럽게 잘 이어졌어. 왜 뺄셈을 했는지 설명하고 결과와 방향까지 일목요연하게 정리해서 읽는 사람도 기분이 좋아지는 답안이야. 지금처럼 논리적으로 쓰는 습관을 계속 유지해 봐!"
+            ),
+            term_usage=CategoryResult(
+                score=100, level="매우 우수",
+                feedback="'합력', 'N(뉴턴)' 단위를 적재적소에 정확히 배치했어. 과학적 표현력이 아주 뛰어나서 실제 시험에서도 좋은 점수를 받을 게 확실해!"
+            ),
+            individual_conditions=[
+                IndividualCondition(name="계산 과정 포함", status="○", reason="계산식(350-150)이 명확하게 포함되었어."),
+                IndividualCondition(name="크기와 방향 명시", status="○", reason="200N이라는 크기와 말의 이동 방향을 모두 잘 썼어."),
+                IndividualCondition(name="용어 사용", status="○", reason="핵심 용어를 완벽하게 사용했어.")
+            ],
+            encouragement="와! 전교 1등의 향기가 나는데? 완벽해! 👑",
+            overall_summary="부족함이 없는 완벽한 답안이야. 개념 이해부터 논리적 서술까지 나무랄 데가 없네! 다음 단원에서도 지금처럼 핵심을 짚는 연습을 이어가길 바라."
+        )
+    
+    # [시나리오 D: 기타 (부분 미흡)]
+    else:
+        report = AnalysisReport(
+            concept_understanding=CategoryResult(score=70, level="보통", feedback="일단 숫자를 적은 건 좋아. 그런데 왜 그 숫자가 나왔는지 한 번만 더 생각해 볼까?"),
+            logical_writing=CategoryResult(score=50, level="보통", feedback="정답까지 가는 징검다리가 몇 개 빠진 느낌이야. 네 생각을 순서대로 적어 봐."),
+            term_usage=CategoryResult(score=80, level="우수", feedback="용어는 잘 썼어! 하지만 단위(N)도 잊지 말고 꼭 챙겨 줘."),
+            individual_conditions=[
+                IndividualCondition(name="계산 과정 포함", status="△", reason="일부 숫자는 있지만 식은 부족해."),
+                IndividualCondition(name="크기와 방향 명시", status="×", reason="방향에 대한 설명이 없어."),
+                IndividualCondition(name="용어 사용", status="○", reason="용어는 잘 사용했어.")
+            ],
+            encouragement="할 수 있어! 다시 한번 천천히 고쳐 써 보자. 🔥",
+            overall_summary="조금만 더 구체적으로 쓰면 훨씬 좋아질 답안이야. 문제의 조건들을 하나씩 체크하며 다시 써 볼까?"
+        )
+
+    return {"analysis_result": report}
 
 
 # =========================
