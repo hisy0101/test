@@ -416,7 +416,7 @@ st.markdown(dedent("""
     font-weight:700;
     margin-bottom:10px;
 ">
-    Mock Preview · AI 평가 결과 시뮬레이션
+    Preview · AI 평가 결과 시뮬레이션
 </div>
 """), unsafe_allow_html=True)
 
