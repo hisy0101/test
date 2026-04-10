@@ -278,7 +278,7 @@ def analysis_node(state: GradingState):
             term_usage=CategoryResult(score=80, level="우수", feedback="용어는 잘 썼어! 하지만 단위(N)도 잊지 말고 꼭 챙겨 줘."),
             individual_conditions=[
                 IndividualCondition(name="계산 과정 포함", status="△", reason="일부 숫자는 있지만 식은 부족해."),
-                IndividualCondition(name="크기와 방향 명시", status="×", reason="방향에 대한 설명이 없어."),
+                IndividualCondition(name="크기와 방향 명시", status="X", reason="방향에 대한 설명이 없어."),
                 IndividualCondition(name="용어 사용", status="○", reason="용어는 잘 사용했어.")
             ],
             encouragement="할 수 있어! 다시 한번 천천히 고쳐 써 보자. 🔥",
